@@ -13,6 +13,12 @@ This project explores how artificial intelligence and machine learning can be ap
 
 To research and prototype AI-driven tools that improve the security, efficiency, and decentralization of Ethereum.
 
+## 🧪 Project Status: In Early Development
+This project is currently in its early stages of development.
+Core components such as the custom Gym environment and the DQN training pipeline are in place, but further refinements, testing, and integrations with Ethereum-specific mechanisms (e.g., MEV simulation, client modeling) are still in progress.
+
+Contributions, feedback, and ideas are welcome!
+
 ## 📄 License
 
 MIT — feel free to use, modify, and build upon this work.
