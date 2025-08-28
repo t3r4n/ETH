@@ -6,8 +6,9 @@ El entorno del agente autónomo está diseñado para modelar la detección de **
 El **estado** del sistema en un instante \( t \) se define como un vector que resume la información disponible en el mempool y las características de las transacciones relevantes para MEV. El vector de estado incluye variables tales como: número de ataques tipo sándwich detectados, cantidad de atacantes y víctimas involucradas, volumen total de transacciones, retorno de inversión (ROI) estimado y actividad de bots MEV. Formalmente, un estado se representa como:  
 
 \[
-s_t = [\text{Sandwich Count}, \text{Attackers}, \text{Victims}, \text{Volume}, \text{ROI}, \text{Bot Activity}]
-\]  
+s_t = [\mathrm{Sandwich\ Count}, \mathrm{Attackers}, \mathrm{Victims}, \mathrm{Volume}, \mathrm{ROI}, \mathrm{Bot\ Activity}]
+\]
+
 
 El **espacio de estados** \( S \) puede considerarse discreto o continuo dependiendo de la granularidad elegida para las métricas cuantitativas, y refleja toda la información relevante para la toma de decisiones del agente.  
 
