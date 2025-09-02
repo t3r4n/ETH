@@ -18,7 +18,7 @@ This project explores how **artificial intelligence** and **machine learning** c
 Develop a **reinforcement learning-based model** to identify **Sandwich attacks** in real time on the Ethereum network, optimizing early detection and reducing false positives and negatives.  
 
 **ES:**  
-Desarrollar un **modelo basado en aprendizaje por refuerzo** que permita identificar en tiempo real **ataques tipo Sandwich** en la red Ethereum, optimizando la detección temprana y reduciendo la tasa de falsos positivos y negativos.  
+Desarrollar un **modelo basado en aprendizaje por refuerzo** que permita identificar en tiempo real **ataques tipo Sandwich** en la red Ethereum. 
 
 ---
 
