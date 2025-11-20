@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reinforcement Learning - Mitigación de Ataques Sandwich</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --dark-bg: #0a0e27;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --accent-blue: #4299e1;
+            --accent-purple: #9f7aea;
+            --accent-pink: #ed64a6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2a1f3a 100%);
+        }
+
+        .background-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        nav ul {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        nav a:hover {
+            background: var(--glass-bg);
+            transform: translateY(-2px);
+        }
+
+        /* Sections */
+        section {
+            min-height: 100vh;
+            padding: 8rem 2rem 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 40px 0 rgba(102, 126, 234, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero .subtitle {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease 0.2s;
+            animation-fill-mode: both;
+        }
+
+        .hero .authors {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease 0.4s;
+            animation-fill-mode: both;
+        }
+
+        .hero .institution {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            animation: fadeInUp 1s ease 0.6s;
+            animation-fill-mode: both;
+        }
+
+        .ethereum-logo {
+            width: 150px;
+            height: 150px;
+            margin: 2rem auto;
+            opacity: 0.8;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Section Headers */
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Objective Section */
+        .objective-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .objective-text {
+            background: var(--primary-gradient);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+
+        .objective-text h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Problem Section */
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .problem-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .problem-card:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-purple);
+        }
+
+        .problem-card h3 {
+            color: var(--accent-pink);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .problem-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Process Section */
+        .process-steps {
+            display: grid;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 2rem;
+            align-items: center;
+            background: var(--glass-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            border-left: 4px solid var(--accent-blue);
+            transition: all 0.3s ease;
+        }
+
+        .step:nth-child(2) { border-left-color: var(--accent-purple); }
+        .step:nth-child(3) { border-left-color: var(--accent-pink); }
+        .step:nth-child(4) { border-left-color: #48bb78; }
+
+        .step:hover {
+            transform: translateX(10px);
+        }
+
+        .step-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .step-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-blue);
+        }
+
+        /* Solution Section */
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .solution-card {
+            text-align: center;
+            padding: 2rem;
+            background: var(--glass-bg);
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .solution-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 10px 30px rgba(159, 122, 234, 0.3);
+        }
+
+        .solution-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Environment Section */
+        .environment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .environment-card {
+            background: var(--glass-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .environment-card h3 {
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .variable-badge {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.5rem;
+            font-size: 0.9rem;
+            border: 1px solid rgba(102, 126, 234, 0.4);
+        }
+
+        .level-table {
+            margin-top: 1rem;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .level-table th,
+        .level-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .level-table th {
+            background: rgba(102, 126, 234, 0.2);
+            color: var(--accent-blue);
+        }
+
+        /* Metrics Section */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .metric-card {
+            background: var(--glass-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-blue);
+        }
+
+        .metric-card h3 {
+            font-size: 1.8rem;
+            color: var(--accent-purple);
+            margin-bottom: 1rem;
+        }
+
+        .metric-formula {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Data Analysis Section */
+        .data-insights {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .insight-card {
+            background: var(--glass-bg);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-blue);
+            transition: all 0.3s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateX(10px);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .insight-card strong {
+            color: var(--accent-purple);
+        }
+
+        /* Technical Section */
+        .technical-content {
+            background: var(--glass-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-top: 2rem;
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .formula-box h4 {
+            color: var(--accent-purple);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            margin: 1rem 0;
+        }
+
+        .variable-list {
+            margin-top: 1rem;
+        }
+
+        .variable-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .variable-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        /* Button */
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--primary-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            section {
+                padding: 6rem 1rem 2rem;
+            }
+
+            .objective-content,
+            .environment-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .glass-card {
+                padding: 2rem;
+            }
+
+            nav ul {
+                gap: 1rem;
+            }
+
+            .step {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(10, 14, 39, 0.9);
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        footer p {
+            color: var(--text-secondary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-gradient);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-gradient);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <nav>
+        <ul>
+            <li><a href="#hero">Inicio</a></li>
+            <li><a href="#objetivo">Objetivo</a></li>
+            <li><a href="#problema">Problema</a></li>
+            <li><a href="#proceso">Proceso</a></li>
+            <li><a href="#afectaciones">Afectaciones</a></li>
+            <li><a href="#solucion">Solución</a></li>
+            <li><a href="#entorno">Entorno</a></li>
+            <li><a href="#metricas">Métricas</a></li>
+            <li><a href="#tecnico">Análisis Técnico</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+        <div class="container">
+            <svg class="ethereum-logo" viewBox="0 0 256 417" xmlns="http://www.w3.org/2000/svg">
+                <polygon fill="#667eea" fill-opacity="0.6" points="127.9611,0 125.1661,9.5 125.1661,285.168 127.9611,287.958 255.9231,212.32"/>
+                <polygon fill="#667eea" fill-opacity="0.45" points="127.962,0 0,212.32 127.962,287.959 127.962,154.158"/>
+                <polygon fill="#764ba2" fill-opacity="0.8" points="127.9611,312.1866 126.3861,314.1066 126.3861,412.3056 127.9611,416.9066 255.9991,236.5866"/>
+                <polygon fill="#764ba2" fill-opacity="0.45" points="127.962,416.9052 127.962,312.1852 0,236.5852"/>
+                <polygon fill="#f093fb" fill-opacity="0.8" points="127.9611,287.9577 255.9211,212.3207 127.9611,154.1587"/>
+                <polygon fill="#f093fb" fill-opacity="0.45" points="0,212.3208 127.9611,287.9578 127.9611,154.1588"/>
+            </svg>
+            
+            <h1>Reinforcement Learning</h1>
+            <p class="subtitle">Diseñado para la Mitigación de Ataques tipo Sandwich en el Mempool de Ethereum</p>
+            <p class="authors">Sharik Garzón - Emily Duarte</p>
+            <p class="institution">Semillero de Investigación | Julián Sanchez<br>UEC - Pregrado Ciencia de Datos</p>
+        </div>
+        <div class="scroll-indicator" onclick="document.getElementById('objetivo').scrollIntoView({behavior: 'smooth'})">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2">
+                <path d="M12 5v14M19 12l-7 7-7-7"/>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Objetivo Section -->
+    <section id="objetivo">
+        <div class="container">
+            <div class="section-header">
+                <h2>Objetivo</h2>
+            </div>
+            <div class="glass-card">
+                <div class="objective-content">
+                    <div class="objective-text">
+                        <h3>Objetivo General</h3>
+                        <p>Diseñar un agente de Reinforcement Learning que sea capaz de detectar y ataques financieros automatizados que ocurren dentro del mempool, el espacio temporal donde las transacciones esperan antes de ser confirmadas en la red Ethereum.</p>
+                    </div>
+                    <div>
+                        <svg class="ethereum-logo" viewBox="0 0 256 417" xmlns="http://www.w3.org/2000/svg">
+                            <polygon fill="#667eea" fill-opacity="0.4" points="127.9611,0 125.1661,9.5 125.1661,285.168 127.9611,287.958 255.9231,212.32"/>
+                            <polygon fill="#667eea" fill-opacity="0.3" points="127.962,0 0,212.32 127.962,287.959 127.962,154.158"/>
+                            <polygon fill="#764ba2" fill-opacity="0.6" points="127.9611,312.1866 126.3861,314.1066 126.3861,412.3056 127.9611,416.9066 255.9991,236.5866"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 3rem;">
+                    <h3 style="color: var(--accent-purple); margin-bottom: 1rem;">Objetivos Específicos</h3>
+                    <div class="process-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <p>Desarrollar un proceso sistemático de recopilación, limpieza y etiquetado de datos provenientes de Eigenphi, generando un conjunto de datos estructurado para identificar patrones asociados a ataques tipo Sandwich.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <p>Desarrollar un modelo de aprendizaje por refuerzo orientado a la detección en tiempo real de transacciones potencialmente maliciosas mediante la definición de un entorno de simulación con variables relevantes.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <p>Evaluar el desempeño del modelo mediante métricas cuantitativas propias de la detección de anomalías, validando su efectividad y capacidad de generalización frente a escenarios no observados previamente.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problema Section -->
+    <section id="problema">
+        <div class="container">
+            <div class="section-header">
+                <h2>Problemas Identificados</h2>
+                <p>Análisis de los ataques tipo Sandwich en Ethereum</p>
+            </div>
+            <div class="glass-card">
+                <h3 style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 2rem; text-align: center;">🥪 Sandwich Attack</h3>
+                <p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem;">El atacante coloca una operación justo antes y otra justo después de la operación de la víctima, "encerrándola" literalmente en un sándwich. Esta secuencia permite al atacante obtener ganancias a expensas de la víctima, manipulando los precios de los activos en medio de la transacción.</p>
+                
+                <div class="problem-grid">
+                    <div class="problem-card">
+                        <div class="problem-icon">😞</div>
+                        <h3>Pérdidas Financieras</h3>
+                        <p>Las víctimas obtienen constantemente un menor valor por sus operaciones, haciendo que el trading en DeFi sea un proceso más arriesgado e ineficiente.</p>
+                    </div>
+                    <div class="problem-card">
+                        <div class="problem-icon">📊</div>
+                        <h3>Manipulación del Mercado</h3>
+                        <p>Los ataques sandwich de alta frecuencia pueden aumentar el deslizamiento y la volatilidad, socavando la integridad del sistema.</p>
+                    </div>
+                    <div class="problem-card">
+                        <div class="problem-icon">🔒</div>
+                        <h3>Pérdida de Confianza</h3>
+                        <p>Los ataques frecuentes desincentivan la participación en los sistemas DeFi, especialmente entre los recién llegados o los traders menos experimentados.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem; padding: 2rem; background: rgba(237, 100, 166, 0.1); border-radius: 15px; border-left: 4px solid var(--accent-pink);">
+                    <p style="font-style: italic; color: var(--text-secondary);">
+                        <strong style="color: var(--accent-pink);">Nota importante:</strong> El cofundador de Ethereum, Vitalik Buterin, ya en 2018 alertó sobre el riesgo sistémico de estos ataques, señalando cómo podrían desestabilizar los sistemas DeFi emergentes.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Proceso Section -->
+    <section id="proceso">
+        <div class="container">
+            <div class="section-header">
+                <h2>¿Cómo Funciona el Ataque?</h2>
+            </div>
+            <div class="glass-card">
+                <div class="process-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Identifican el Objetivo</h3>
+                            <p>Monitorean el mempool público en busca de transacciones grandes o con alto deslizamiento que puedan ser explotadas.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Ventaja Anticipada</h3>
+                            <p>Realizan una orden de compra de un activo <strong>justo antes de que se procese la transacción de la víctima</strong>, lo que provoca un aumento del precio del activo debido a la mayor demanda.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Transacción de la Víctima</h3>
+                            <p>La transacción de la víctima se ejecuta a este precio inflado, lo que da como resultado que reciba menos tokens de lo esperado.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Backrunning</h3>
+                            <p>Una vez completada la transacción de la víctima, el atacante vende el activo al precio ahora más alto, asegurando una ganancia.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Afectaciones Section -->
+    <section id="afectaciones">
+        <div class="container">
+            <div class="section-header">
+                <h2>Afectaciones Principales</h2>
+            </div>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">💸</div>
+                    <h3>Pérdidas Financieras</h3>
+                    <p>Las víctimas obtienen constantemente un menor valor por sus operaciones, haciendo que el trading en DeFi sea un proceso más arriesgado e ineficiente.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">📈</div>
+                    <h3>Manipulación del Mercado</h3>
+                    <p>Los ataques sandwich de alta frecuencia pueden aumentar el deslizamiento y la volatilidad, socavando la integridad del sistema.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🚫</div>
+                    <h3>Pérdida de Confianza</h3>
+                    <p>Los ataques frecuentes desincentivan la participación en los sistemas DeFi, especialmente entre los recién llegados o los traders menos experimentados.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solución Section -->
+    <section id="solucion">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nuestra Solución</h2>
+                <p>Sistema de detección basado en Reinforcement Learning</p>
+            </div>
+            <div class="glass-card">
+                <h3 style="text-align: center; font-size: 2rem; margin-bottom: 2rem; color: var(--accent-purple);">Acciones del Agente</h3>
+                <div class="solution-grid">
+                    <div class="solution-card">
+                        <div class="solution-icon">🔔</div>
+                        <h3>Alertar</h3>
+                        <p>El agente detecta un ataque real y lanza una alerta para proteger a las víctimas potenciales.</p>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(72, 187, 120, 0.2); border-radius: 10px;">
+                            <strong style="color: #48bb78;">Resultado:</strong> Ahorro, evita la pérdida del ataque
+                        </div>
+                        <div style="margin-top: 0.5rem; padding: 1rem; background: rgba(102, 126, 234, 0.2); border-radius: 10px;">
+                            <strong style="color: var(--accent-blue);">Recompensa:</strong> Mayor
+                        </div>
+                    </div>
+                    <div class="solution-card">
+                        <div class="solution-icon">🔕</div>
+                        <h3>No Alertar</h3>
+                        <p>El agente determina que no hay riesgo de ataque y no emite ninguna alerta.</p>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(237, 100, 166, 0.2); border-radius: 10px;">
+                            <strong style="color: var(--accent-pink);">Recompensa:</strong> Menor
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem;">
+                    <h3 style="text-align: center; margin-bottom: 2rem; color: var(--accent-blue);">Tabla de Resultados</h3>
+                    <table class="level-table">
+                        <thead>
+                            <tr>
+                                <th>Situación</th>
+                                <th>¿Qué hace el agente?</th>
+                                <th>Resultado</th>
+                                <th>Tipo de recompensa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Detecta un ataque real</td>
+                                <td>Lanza una alerta</td>
+                                <td>Ahorro, evita la pérdida del ataque</td>
+                                <td style="color: #48bb78;">Recompensa Mayor</td>
+                            </tr>
+                            <tr>
+                                <td>Lanza una alerta pero no hay ataque</td>
+                                <td>Falsa alarma</td>
+                                <td>Penalización por generar una alerta falsa</td>
+                                <td style="color: #f56565;">Penalización menor</td>
+                            </tr>
+                            <tr>
+                                <td>No lanza alerta y no hay ataque</td>
+                                <td>Todo tranquilo</td>
+                                <td>Recompensa por no generar falsos avisos</td>
+                                <td style="color: #48bb78;">Recompensa menor</td>
+                            </tr>
+                            <tr>
+                                <td>No lanza alerta y sí hay ataque</td>
+                                <td>Falla en detectar</td>
+                                <td>Gran pérdida por no detectar el ataque</td>
+                                <td style="color: #f56565;">Penalización mayor</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Entorno Section -->
+    <section id="entorno">
+        <div class="container">
+            <div class="section-header">
+                <h2>Entorno de Aprendizaje</h2>
+                <p>Variables y contexto del agente RL</p>
+            </div>
+            <div class="glass-card">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="display: inline-block; background: rgba(102, 126, 234, 0.2); padding: 1rem 2rem; border-radius: 15px; margin: 0.5rem;">
+                        <strong style="color: var(--accent-blue);">Fuente de Datos:</strong> Eigenphi 👀
+                    </div>
+                </div>
+
+                <div class="environment-grid">
+                    <div class="environment-card">
+                        <h3>Contexto de la Operación</h3>
+                        <div class="variable-badge">costo_ataque_fee</div>
+                        <div class="variable-badge">ganancia_neta</div>
+                        <div class="variable-badge">roi</div>
+                    </div>
+                    <div class="environment-card">
+                        <h3>Entorno de Mercado</h3>
+                        <div class="variable-badge">total_ETH_movidos</div>
+                        <div class="variable-badge">volumen_grande</div>
+                        <div class="variable-badge">roi_grande</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <h3 style="color: var(--accent-purple); margin-bottom: 1rem;">Actividad Sospechosa Reciente</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+                        <div class="variable-badge">num_ataques</div>
+                        <div class="variable-badge">total_transacc_bots</div>
+                        <div class="variable-badge">roi_bots</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem;">
+                    <h3 style="color: var(--accent-blue); margin-bottom: 1rem; text-align: center;">Niveles de Riesgo</h3>
+                    <table class="level-table">
+                        <thead>
+                            <tr>
+                                <th>Nivel</th>
+                                <th>Significado General</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong style="color: #48bb78;">Bajo</strong></td>
+                                <td>Contexto estable o poco rentable para atacantes (bajo riesgo)</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: #ed8936;">Medio</strong></td>
+                                <td>Entorno de riesgo intermedio o actividad irregular</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: #f56565;">Alto</strong></td>
+                                <td>Alta rentabilidad y actividad de bots → entorno propenso a ataques</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Métricas Section -->
+    <section id="metricas">
+        <div class="container">
+            <div class="section-header">
+                <h2>Métricas de Evaluación</h2>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Operativa</h3>
+                    <p style="margin-bottom: 1rem;">Analiza la eficiencia funcional del agente dentro del entorno</p>
+                    <div style="text-align: left;">
+                        <h4 style="color: var(--accent-blue); margin-top: 1rem;">Precisión</h4>
+                        <div class="metric-formula">Alertas Correctas / Total de Alertas Emitidas</div>
+                        
+                        <h4 style="color: var(--accent-blue); margin-top: 1rem;">Recall</h4>
+                        <div class="metric-formula">Ataques Detectados / Ataques Reales</div>
+                        
+                        <h4 style="color: var(--accent-blue); margin-top: 1rem;">False Positive Rate</h4>
+                        <div class="metric-formula">Alertas Incorrectas / Total de Alertas</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Temporal</h3>
+                    <p style="margin-bottom: 1rem;">Mide la capacidad de reacción del agente frente a la dinámica de la red</p>
+                    <div style="text-align: left;">
+                        <h4 style="color: var(--accent-purple); margin-top: 1rem;">MTBA</h4>
+                        <p style="font-size: 0.9rem; margin: 0.5rem 0;">Mean Time Between Alerts</p>
+                        <div class="metric-formula">Tiempo Total de Monitoreo / Número de Alertas Emitidas</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Económica</h3>
+                    <p style="margin-bottom: 1rem;">Evalúa el impacto financiero directo de las decisiones del agente</p>
+                    <div style="text-align: left;">
+                        <h4 style="color: var(--accent-pink); margin-top: 1rem;">EMS</h4>
+                        <p style="font-size: 0.9rem; margin: 0.5rem 0;">Expected Monetary Saved</p>
+                        <div class="metric-formula">
+                            (Detecciones Correctas × Valor Ahorrado) - 
+                            (Alertas Falsas × Costo por Alerta)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Análisis Técnico Section -->
+    <section id="tecnico">
+        <div class="container">
+            <div class="section-header">
+                <h2>Análisis Técnico</h2>
+                <p>Formalización matemática del entorno MDP</p>
+            </div>
+            <div class="glass-card">
+                <div class="technical-content">
+                    <h3 style="color: var(--accent-purple); font-size: 2rem; margin-bottom: 2rem;">Proceso de Decisión de Markov (MDP)</h3>
+                    
+                    <div class="formula-box">
+                        <h4>Tupla MDP</h4>
+                        <div class="formula">M = (S, A, P, r, γ)</div>
+                        <p style="margin-top: 1rem; color: var(--text-secondary);">
+                            Donde el proceso satisface la propiedad de Markov: el estado futuro depende únicamente del estado actual y la acción tomada.
+                        </p>
+                    </div>
+
+                    <div class="formula-box">
+                        <h4>Espacio de Estados (S)</h4>
+                        <div class="formula">St = (Xt, Poolt, Mempool_Contextt)</div>
+                        <div class="variable-list">
+                            <div class="variable-item">
+                                <strong style="color: var(--accent-blue);">Xt:</strong> Características propias de la transacción (costo_ataque_fee, ganancia_neta, roi)
+                            </div>
+                            <div class="variable-item">
+                                <strong style="color: var(--accent-blue);">Poolt:</strong> Estado del pool de liquidez (total_ETH_movidos, volumen_grande, roi_grande)
+                            </div>
+                            <div class="variable-item">
+                                <strong style="color: var(--accent-blue);">Mempool_Contextt:</strong> Actividad sospechosa reciente (num_ataques, victimas, atacantes, total_transacc_bots, roi_bots)
+                            </div>
+                        </div>
+                        <p style="margin-top: 1.5rem; padding: 1rem; background: rgba(237, 100, 166, 0.1); border-radius: 10px;">
+                            <strong style="color: var(--accent-pink);">Discretización:</strong> Variables continuas convertidas a categorías {Bajo, Medio, Alto} mediante percentiles (p33, p66), resultando en 27 estados compuestos posibles.
+                        </p>
+                    </div>
+
+                    <div class="formula-box">
+                        <h4>Espacio de Acciones (A)</h4>
+                        <div class="formula">A = {a₀, a₁}</div>
+                        <div class="variable-list">
+                            <div class="variable-item">
+                                <strong style="color: var(--accent-blue);">a₀:</strong> No alertar (clasificación negativa)
+                            </div>
+                            <div class="variable-item">
+                                <strong style="color: var(--accent-blue);">a₁:</strong> Alertar (clasificación positiva)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="formula-box">
+                        <h4>Función de Recompensa (r)</h4>
+                        <p style="margin-bottom: 1rem;">La recompensa inmediata Rt+1 depende de la acción At y el resultado real (Ataque / No Ataque):</p>
+                        <div style="background: rgba(0, 0, 0, 0.3); padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
+                            <div style="margin: 0.5rem 0;"><strong style="color: #48bb78;">+CAhorro</strong> si (At = a₁) ∧ (Outcome = Ataque)</div>
+                            <div style="margin: 0.5rem 0;"><strong style="color: #f56565;">-CPenalización</strong> si (At = a₁) ∧ (Outcome = No Ataque)</div>
+                            <div style="margin: 0.5rem 0;"><strong style="color: #48bb78;">+ε</strong> si (At = a₀) ∧ (Outcome = No Ataque)</div>
+                            <div style="margin: 0.5rem 0;"><strong style="color: #f56565;">-CPérdida</strong> si (At = a₀) ∧ (Outcome = Ataque)</div>
+                        </div>
+                    </div>
+
+                    <div class="formula-box">
+                        <h4>Probabilidades de Transición (P)</h4>
+                        <div class="formula">P(s' | s, a) = Pr(St+1 = s' | St = s, At = a)</div>
+                        <p style="margin-top: 1rem; color: var(--text-secondary);">
+                            Las acciones del agente NO afectan las transiciones, ya que solo notifica. El entorno evoluciona independientemente según la dinámica del mempool de Ethereum.
+                        </p>
+                        <p style="margin-top: 1rem; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                            <strong>Dimensión de la matriz:</strong> 27 estados × 27 estados = 729 probabilidades de transición posibles
+                        </p>
+                    </div>
+
+                    <div class="formula-box">
+                        <h4>Factor de Descuento (γ)</h4>
+                        <div class="formula">γ ∈ [0, 1]</div>
+                        <p style="margin-top: 1rem; color: var(--text-secondary);">
+                            Factor que determina la importancia de las recompensas futuras frente a las inmediatas en el proceso de aprendizaje del agente.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem;">
+                    <h3 style="color: var(--accent-purple); font-size: 1.8rem; margin-bottom: 1.5rem;">Análisis Exploratorio de Datos (EDA)</h3>
+                    <p style="margin-bottom: 1.5rem; font-size: 1.1rem;">
+                        Análisis de datos del mempool de Ethereum desde el <strong>30 de noviembre de 2022</strong> hasta el <strong>22 de julio de 2025</strong> (965 días de datos).
+                    </p>
+                    
+                    <div class="data-insights">
+                        <div class="insight-card">
+                            <strong>Alta actividad de ataques:</strong> Promedio de 3,980 ataques sandwich por día, con picos que superan los 13,000 ataques.
+                        </div>
+                        <div class="insight-card">
+                            <strong>Concentración de atacantes:</strong> En promedio, 67 atacantes afectan a 3,765 víctimas, evidenciando un grupo reducido de bots sofisticados.
+                        </div>
+                        <div class="insight-card">
+                            <strong>ROI variable:</strong> Mediana de 9.41% pero con máximos de 1,412%, indicando oportunidades excepcionales pero poco frecuentes. Mínimo de -109% muestra que también hay pérdidas.
+                        </div>
+                        <div class="insight-card">
+                            <strong>Impacto económico masivo:</strong> ~94 millones de ETH acumulados en ganancias, equivalente a aproximadamente 18.7 millones de COP (a precios de 2025).
+                        </div>
+                        <div class="insight-card">
+                            <strong>Ataques grandes (&gt;1k ETH):</strong> Concentran ~70.9 millones ETH (>75% del profit total) con ROI promedio muy alto, siendo extremadamente rentables cuando ocurren.
+                        </div>
+                        <div class="insight-card">
+                            <strong>Eficiencia de bots:</strong> Aunque los bots solo generaron ~16% del total de ganancias, su ROI (24.89%) supera el ROI global (22%), demostrando ventajas competitivas en velocidad y automatización.
+                        </div>
+                        <div class="insight-card">
+                            <strong>Ventaja de primeros movimientos:</strong> Los bots capturan las oportunidades más rentables primero, dejando escenarios menos atractivos para traders humanos.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Reinforcement Learning para Mitigación de Ataques Sandwich</p>
+            <p style="margin-top: 0.5rem;">Sharik Garzón - Emily Duarte | UEC - Pregrado Ciencia de Datos</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">Semillero de Investigación | Julián Sanchez</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+        });
+
+        // Animate elements on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.glass-card, .problem-card, .solution-card, .metric-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+
+        // Hide scroll indicator after first scroll
+        let hasScrolled = false;
+        window.addEventListener('scroll', () => {
+            if (!hasScrolled && window.scrollY > 100) {
+                hasScrolled = true;
+                const indicator = document.querySelector('.scroll-indicator');
+                if (indicator) {
+                    indicator.style.opacity = '0';
+                    setTimeout(() => indicator.style.display = 'none', 300);
+                }
+            }
+        });
+
+        // Add active state to navigation
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('nav a');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.style.background = '';
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.style.background = 'var(--glass-bg)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
