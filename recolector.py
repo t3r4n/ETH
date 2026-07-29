@@ -1,7 +1,7 @@
 import asyncio, websockets, json, csv, os
 from datetime import datetime
 
-ALCHEMY_WS = "wss://eth-mainnet.g.alchemy.com/v2/alch_vTaZGvB5KVVEhp-acQp1W"  # la lee de la variable de entorno, no del código
+ALCHEMY_WS = os.environ["ALCHEMY_WS"]  
 CAMPOS = ["timestamp","hash","from","to","value","gas","maxFeePerGas",
           "maxPriorityFeePerGas","input"]
 
